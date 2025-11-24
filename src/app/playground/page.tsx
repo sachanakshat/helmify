@@ -1,7 +1,15 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import PageLayout from "@/components/layout/PageLayout";
+import FileExplorer from "@/components/common/FileExplorer";
+import CodeViewer from "@/components/common/CodeViewer";
+import dynamic from "next/dynamic";
+
+const Terminal = dynamic(() => import("@/components/common/Terminal"), {
+  ssr: false,
+});
+import { getGenerationFromCache } from "@/lib/storage";
 
 const WRAPPER_API_URL = "http://localhost:8080";
 
@@ -10,23 +18,52 @@ export default function PlaygroundPage() {
   const [status, setStatus] = useState<string | null>(null);
   const [resources, setResources] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [cachedFiles, setCachedFiles] = useState<Record<string, string>>({});
+  const [selectedFile, setSelectedFile] = useState<{ path: string; content: string } | null>(null);
+
+  // Load cached infrastructure from IAC page
+  useEffect(() => {
+    const cached = getGenerationFromCache();
+    if (cached) {
+      const allFiles: Record<string, string> = {};
+      if (cached.terraform?.files) {
+        Object.entries(cached.terraform.files).forEach(([path, content]) => {
+          allFiles[`terraform/${path}`] = content;
+        });
+      }
+      if (cached.helmCharts) {
+        cached.helmCharts.forEach((chart) => {
+          Object.entries(chart.files).forEach(([path, content]) => {
+            allFiles[`helm-charts/${chart.name}/${path}`] = content;
+          });
+        });
+      }
+      setCachedFiles(allFiles);
+    }
+  }, []);
 
   const handleDeploy = async () => {
     setDeploying(true);
     setError(null);
     try {
+      const cached = getGenerationFromCache();
+      if (!cached || !cached.helmCharts || cached.helmCharts.length === 0) {
+        throw new Error("No Helm charts found. Please generate infrastructure in the IAC page first.");
+      }
+
       const response = await fetch(`${WRAPPER_API_URL}/deploy`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          // This would contain the generated Helm charts/Terraform
-          // For now, we'll send a placeholder
-          charts: [],
+          charts: cached.helmCharts,
         }),
       });
-      if (!response.ok) throw new Error("Deployment failed");
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || "Deployment failed");
+      }
       const data = await response.json();
-      setStatus(data.message || "Deployment initiated");
+      setStatus(JSON.stringify(data, null, 2));
     } catch (err) {
       setError(
         err instanceof Error
@@ -70,8 +107,29 @@ export default function PlaygroundPage() {
     }
   };
 
+  const handleFileSelect = (path: string, content: string) => {
+    setSelectedFile({ path, content });
+  };
+
   return (
-    <PageLayout>
+    <PageLayout
+      showFileExplorer={Object.keys(cachedFiles).length > 0}
+      fileExplorer={
+        <FileExplorer
+          files={cachedFiles}
+          onFileSelect={handleFileSelect}
+          selectedPath={selectedFile?.path}
+        />
+      }
+      codeViewer={
+        <div className="w-[600px]">
+          <CodeViewer
+            content={selectedFile?.content || ""}
+            filename={selectedFile?.path}
+          />
+        </div>
+      }
+    >
       <div className="mx-auto max-w-6xl px-6 py-10">
         <header className="mb-10">
           <h1 className="text-4xl font-bold bg-gradient-to-r from-blue-400 to-purple-400 bg-clip-text text-transparent">
@@ -93,13 +151,13 @@ export default function PlaygroundPage() {
           </p>
         </div>
 
-        <div className="grid gap-6 md:grid-cols-2">
+        <div className="grid gap-6 md:grid-cols-2 mb-6">
           <section className="rounded-xl border border-slate-700 bg-slate-800/50 p-6 backdrop-blur-sm">
             <h2 className="text-xl font-semibold text-slate-200 mb-4">Deployment Actions</h2>
             <div className="space-y-4">
               <button
                 onClick={handleDeploy}
-                disabled={deploying}
+                disabled={deploying || Object.keys(cachedFiles).length === 0}
                 className="w-full rounded-lg bg-gradient-to-r from-blue-600 to-purple-600 px-6 py-3 font-semibold text-white transition-all hover:from-blue-700 hover:to-purple-700 disabled:opacity-50"
               >
                 {deploying ? "Deploying..." : "Deploy to Minikube"}
@@ -117,6 +175,15 @@ export default function PlaygroundPage() {
                 View Resources (kubectl get)
               </button>
             </div>
+            {Object.keys(cachedFiles).length === 0 && (
+              <p className="mt-4 text-xs text-slate-500">
+                No infrastructure found. Generate infrastructure in the{" "}
+                <a href="/iac" className="text-blue-400 hover:text-blue-300">
+                  IAC page
+                </a>{" "}
+                first.
+              </p>
+            )}
           </section>
 
           <section className="rounded-xl border border-slate-700 bg-slate-800/50 p-6 backdrop-blur-sm">
@@ -150,6 +217,40 @@ export default function PlaygroundPage() {
           </section>
         </div>
 
+        {/* Interactive Terminal */}
+        <section className="mb-6 rounded-xl border border-slate-700 bg-slate-800/50 backdrop-blur-sm overflow-hidden">
+          <Terminal className="h-[400px]" />
+        </section>
+
+        {/* Infrastructure Editor - Shows cached files */}
+        {Object.keys(cachedFiles).length > 0 && (
+          <section className="rounded-xl border border-slate-700 bg-slate-800/50 backdrop-blur-sm overflow-hidden">
+            <div className="border-b border-slate-700 px-4 py-2 bg-slate-800/50">
+              <h2 className="text-xl font-semibold text-slate-200">
+                Generated Infrastructure (from IAC page)
+              </h2>
+              <p className="text-xs text-slate-400 mt-1">
+                View and edit your generated Terraform and Helm charts
+              </p>
+            </div>
+            <div className="flex h-[500px]">
+              <div className="w-64 border-r border-slate-700">
+                <FileExplorer
+                  files={cachedFiles}
+                  onFileSelect={handleFileSelect}
+                  selectedPath={selectedFile?.path}
+                />
+              </div>
+              <div className="flex-1">
+                <CodeViewer
+                  content={selectedFile?.content || "// Select a file from the explorer to view"}
+                  filename={selectedFile?.path}
+                />
+              </div>
+            </div>
+          </section>
+        )}
+
         <section className="mt-6 rounded-xl border border-slate-700 bg-slate-800/50 p-6 backdrop-blur-sm">
           <h2 className="text-xl font-semibold text-slate-200 mb-4">How It Works</h2>
           <div className="space-y-3 text-slate-400 text-sm">
@@ -173,4 +274,3 @@ export default function PlaygroundPage() {
     </PageLayout>
   );
 }
-

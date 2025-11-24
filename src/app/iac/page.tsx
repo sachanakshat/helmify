@@ -1,14 +1,16 @@
 "use client";
 
-import { FormEvent, useState } from "react";
+import { FormEvent, useState, useEffect } from "react";
 import PageLayout from "@/components/layout/PageLayout";
 import CloudSelector from "@/components/iac/CloudSelector";
 import MicroserviceList from "@/components/iac/MicroserviceList";
 import GenerateButton from "@/components/iac/GenerateButton";
+import AIGenerateButton from "@/components/iac/AIGenerateButton";
 import FileExplorer from "@/components/common/FileExplorer";
 import CodeViewer from "@/components/common/CodeViewer";
 import { MicroserviceState, defaultMicroservice } from "@/lib/microserviceTypes";
 import { cloudRegions } from "@/lib/constants";
+import { saveGenerationToCache, getGenerationFromCache } from "@/lib/storage";
 
 export default function IACPage() {
   const [cloud, setCloud] = useState<"aws" | "azure">("aws");
@@ -19,11 +21,40 @@ export default function IACPage() {
   const [expandedService, setExpandedService] = useState<number | null>(0);
   const [customPrompt, setCustomPrompt] = useState("");
   const [loading, setLoading] = useState(false);
+  const [aiLoading, setAiLoading] = useState(false);
   const [generationResult, setGenerationResult] = useState<{
     terraform?: { files: Record<string, string> };
     helmCharts?: Array<{ name: string; files: Record<string, string> }>;
   } | null>(null);
   const [selectedFile, setSelectedFile] = useState<{ path: string; content: string } | null>(null);
+  const [selectedChart, setSelectedChart] = useState<string | null>(null);
+
+  // Load from cache on mount
+  useEffect(() => {
+    const cached = getGenerationFromCache();
+    if (cached) {
+      const allFiles: Record<string, string> = {};
+      if (cached.terraform?.files) {
+        Object.entries(cached.terraform.files).forEach(([path, content]) => {
+          allFiles[`terraform/${path}`] = content;
+        });
+      }
+      if (cached.helmCharts) {
+        cached.helmCharts.forEach((chart) => {
+          Object.entries(chart.files).forEach(([path, content]) => {
+            allFiles[`helm-charts/${chart.name}/${path}`] = content;
+          });
+        });
+      }
+      setGenerationResult({
+        terraform: cached.terraform,
+        helmCharts: cached.helmCharts,
+      });
+      if (cached.helmCharts && cached.helmCharts.length > 0) {
+        setSelectedChart(cached.helmCharts[0].name);
+      }
+    }
+  }, []);
 
   const handleMicroserviceChange = (
     index: number,
@@ -139,8 +170,22 @@ export default function IACPage() {
             allFiles[`helm-charts/${chart.name}/${path}`] = content;
           });
         });
+        if (json.result.helmCharts.length > 0) {
+          setSelectedChart(json.result.helmCharts[0].name);
+        }
       }
-      setGenerationResult({ terraform: { files: allFiles } });
+      setGenerationResult({
+        terraform: json.result?.terraform,
+        helmCharts: json.result?.helmCharts,
+      });
+
+      // Save to cache
+      saveGenerationToCache({
+        terraform: json.result?.terraform,
+        helmCharts: json.result?.helmCharts,
+        cloud,
+        region,
+      });
     } catch (error) {
       console.error("Failed to generate:", error);
     } finally {
@@ -148,11 +193,78 @@ export default function IACPage() {
     }
   };
 
+  const handleAIGenerate = (modifiedFiles: Record<string, string>) => {
+    if (!selectedChart || !generationResult) return;
+
+    // Update the selected chart with AI-generated files
+    const updatedCharts = generationResult.helmCharts?.map((chart) =>
+      chart.name === selectedChart
+        ? { ...chart, files: modifiedFiles }
+        : chart
+    ) || [];
+
+    setGenerationResult({
+      terraform: generationResult.terraform,
+      helmCharts: updatedCharts,
+    });
+
+    // Update cache
+    const cached = getGenerationFromCache();
+    if (cached && cached.helmCharts) {
+      const updatedCharts = cached.helmCharts.map((chart) =>
+        chart.name === selectedChart
+          ? { ...chart, files: modifiedFiles }
+          : chart
+      );
+      saveGenerationToCache({
+        terraform: cached.terraform,
+        helmCharts: updatedCharts,
+        cloud: cached.cloud,
+        region: cached.region,
+      });
+    }
+
+    // Update selected file if it was modified
+    if (selectedFile && selectedFile.path.startsWith(`helm-charts/${selectedChart}/`)) {
+      const relativePath = selectedFile.path.replace(`helm-charts/${selectedChart}/`, "");
+      if (modifiedFiles[relativePath]) {
+        setSelectedFile({
+          path: selectedFile.path,
+          content: modifiedFiles[relativePath],
+        });
+      }
+    }
+  };
+
   const handleFileSelect = (path: string, content: string) => {
     setSelectedFile({ path, content });
   };
 
-  const allFiles: Record<string, string> = generationResult?.terraform?.files || {};
+  // Combine all files for file explorer
+  const allFiles: Record<string, string> = {};
+  if (generationResult?.terraform?.files) {
+    Object.entries(generationResult.terraform.files).forEach(([path, content]) => {
+      allFiles[`terraform/${path}`] = content;
+    });
+  }
+  if (generationResult?.helmCharts) {
+    generationResult.helmCharts.forEach((chart) => {
+      Object.entries(chart.files).forEach(([path, content]) => {
+        allFiles[`helm-charts/${chart.name}/${path}`] = content;
+      });
+    });
+  }
+  
+  // Get current chart files for AI generation
+  const currentChartFiles: Record<string, string> = selectedChart
+    ? Object.entries(allFiles)
+        .filter(([path]) => path.startsWith(`helm-charts/${selectedChart}/`))
+        .reduce<Record<string, string>>((acc, [path, content]) => {
+          const relativePath = path.replace(`helm-charts/${selectedChart}/`, "");
+          acc[relativePath] = content;
+          return acc;
+        }, {})
+    : {};
 
   return (
     <PageLayout
@@ -223,15 +335,49 @@ export default function IACPage() {
             onNestedChange={handleNestedChange}
           />
 
-          <GenerateButton
-            loading={loading}
-            onSubmit={handleGenerateIac}
-            customPrompt={customPrompt}
-            onPromptChange={setCustomPrompt}
-          />
+          <GenerateButton loading={loading} onSubmit={handleGenerateIac} />
+
+          {Object.keys(allFiles).length > 0 && selectedChart && Object.keys(currentChartFiles).length > 0 && (
+            <section className="rounded-xl border border-slate-700 bg-slate-800/50 p-6 backdrop-blur-sm">
+              <div className="mb-4">
+                <label className="block text-sm font-medium text-slate-300 mb-2">
+                  Select Chart for AI Modification
+                </label>
+                <select
+                  className="w-full rounded-lg border border-slate-600 bg-slate-700 px-3 py-2 text-sm text-slate-100 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20"
+                  value={selectedChart || ""}
+                  onChange={(e) => setSelectedChart(e.target.value)}
+                >
+                  {generationResult?.helmCharts?.map((chart) => (
+                    <option key={chart.name} value={chart.name}>
+                      {chart.name}
+                    </option>
+                  )) || []}
+                </select>
+              </div>
+              <AIGenerateButton
+                currentCharts={currentChartFiles}
+                chartName={selectedChart}
+                onGenerated={handleAIGenerate}
+              />
+            </section>
+          )}
+
+          <section className="rounded-xl border border-slate-700 bg-slate-800/50 p-6 backdrop-blur-sm">
+            <h2 className="text-xl font-semibold text-slate-200 mb-4">Custom Prompt (Optional)</h2>
+            <p className="text-sm text-slate-500 mb-4">
+              Additional requirements for preset template generation (not used for AI generation)
+            </p>
+            <textarea
+              className="w-full rounded-lg border border-slate-600 bg-slate-700 px-3 py-2 text-sm text-slate-100 placeholder-slate-500 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20"
+              rows={3}
+              value={customPrompt}
+              onChange={(e) => setCustomPrompt(e.target.value)}
+              placeholder="Additional requirements for preset template generation..."
+            />
+          </section>
         </div>
       </div>
     </PageLayout>
   );
 }
-
