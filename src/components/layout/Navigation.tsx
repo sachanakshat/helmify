@@ -8,6 +8,9 @@ const navItems = [
   { href: "/iac", label: "Infrastructure" },
   { href: "/pipelines", label: "Pipelines" },
   { href: "/secrets", label: "Secrets" },
+  { href: "/playground", label: "Playground" },
+  { href: "/pricing", label: "Pricing" },
+  { href: "/guides", label: "Guides" },
 ];
 
 export default function Navigation() {
