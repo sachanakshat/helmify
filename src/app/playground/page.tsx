@@ -121,14 +121,14 @@ export default function PlaygroundPage() {
           selectedPath={selectedFile?.path}
         />
       }
-      codeViewer={
-        <div className="w-[600px]">
-          <CodeViewer
-            content={selectedFile?.content || ""}
-            filename={selectedFile?.path}
-          />
-        </div>
-      }
+      // codeViewer={
+      //   <div className="w-[600px]">
+      //     <CodeViewer
+      //       content={selectedFile?.content || ""}
+      //       filename={selectedFile?.path}
+      //     />
+      //   </div>
+      // }
     >
       <div className="mx-auto max-w-6xl px-6 py-10">
         <header className="mb-10">
