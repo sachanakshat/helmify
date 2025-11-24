@@ -43,7 +43,7 @@ export async function POST(request: NextRequest) {
     
     logger.info({ type, fileCount: Object.keys(files || {}).length }, 'Generated ZIP download');
 
-    return new NextResponse(zipBuffer, {
+    return new NextResponse(zipBuffer as unknown as BodyInit, {
       headers: {
         'Content-Type': 'application/zip',
         'Content-Disposition': `attachment; filename="helmify-${type}-${Date.now()}.zip"`,
