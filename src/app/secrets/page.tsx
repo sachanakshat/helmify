@@ -43,7 +43,7 @@ export default function SecretsPage() {
     <PageLayout>
       <div className="mx-auto max-w-4xl px-6 py-10">
         <header className="mb-10">
-          <h1 className="text-4xl font-bold bg-gradient-to-r from-blue-400 to-purple-400 bg-clip-text text-transparent">
+          <h1 className="text-4xl font-bold bg-linear-to-r from-blue-400 to-purple-400 bg-clip-text text-transparent">
             Secrets Management
           </h1>
           <p className="mt-2 text-lg text-slate-400">
@@ -78,14 +78,26 @@ export default function SecretsPage() {
                   key={index}
                   className="rounded-xl border border-slate-700 bg-slate-800/30 p-3"
                 >
-                  <input
-                    className="w-full rounded-lg border border-slate-600 bg-slate-700 px-3 py-2 text-sm text-slate-100 placeholder-slate-500 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20"
-                    value={block.name}
-                    onChange={(e) => handleSecretChange(index, { name: e.target.value })}
-                    placeholder="Secret bundle name"
-                  />
+                  <div className="flex items-center gap-2 mb-2">
+                    <input
+                      className="flex-1 rounded-lg border border-slate-600 bg-slate-700 px-3 py-2 text-sm text-slate-100 placeholder-slate-500 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20"
+                      value={block.name}
+                      onChange={(e) => handleSecretChange(index, { name: e.target.value })}
+                      placeholder="Secret bundle name"
+                    />
+                    {secrets.length > 1 && (
+                      <button
+                        type="button"
+                        onClick={() => setSecrets((prev) => prev.filter((_, i) => i !== index))}
+                        className="text-xs text-red-400 hover:text-red-300 transition-colors shrink-0"
+                        title="Remove block"
+                      >
+                        ✕
+                      </button>
+                    )}
+                  </div>
                   <textarea
-                    className="mt-2 w-full rounded-lg border border-slate-600 bg-slate-700 px-3 py-2 text-xs font-mono text-slate-100 placeholder-slate-500 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20"
+                    className="w-full rounded-lg border border-slate-600 bg-slate-700 px-3 py-2 text-xs font-mono text-slate-100 placeholder-slate-500 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20"
                     rows={4}
                     value={block.raw}
                     onChange={(e) => handleSecretChange(index, { raw: e.target.value })}

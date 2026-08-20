@@ -8,6 +8,7 @@ interface MicroserviceListProps {
   expandedService: number | null;
   onAdd: () => void;
   onToggle: (index: number) => void;
+  onRemove: (index: number) => void;
   onChange: (index: number, changes: Partial<MicroserviceState>) => void;
   onNestedChange: (
     index: number,
@@ -21,6 +22,7 @@ export default function MicroserviceList({
   expandedService,
   onAdd,
   onToggle,
+  onRemove,
   onChange,
   onNestedChange,
 }: MicroserviceListProps) {
@@ -45,6 +47,7 @@ export default function MicroserviceList({
             index={index}
             isExpanded={expandedService === index}
             onToggle={() => onToggle(index)}
+            onRemove={() => onRemove(index)}
             onChange={(changes) => onChange(index, changes)}
             onNestedChange={(path, changes) => onNestedChange(index, path, changes)}
           />

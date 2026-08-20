@@ -11,7 +11,7 @@ export default function Home() {
         <div className="mx-auto max-w-7xl px-6">
           {/* Hero Section */}
           <section className="text-center py-20">
-            <h1 className="text-6xl md:text-7xl font-bold bg-gradient-to-r from-blue-400 to-purple-400 bg-clip-text text-transparent mb-6">
+            <h1 className="text-6xl md:text-7xl font-bold bg-linear-to-r from-blue-400 to-purple-400 bg-clip-text text-transparent mb-6">
               Deploy Faster, Deploy Smarter
           </h1>
             <p className="text-2xl md:text-3xl text-slate-400 mb-4 max-w-3xl mx-auto">
@@ -24,7 +24,7 @@ export default function Home() {
             <div className="flex gap-4 justify-center">
               <Link
                 href="/iac"
-                className="rounded-lg bg-gradient-to-r from-blue-600 to-purple-600 px-8 py-4 text-white font-semibold hover:from-blue-700 hover:to-purple-700 transition-all"
+                className="rounded-lg bg-linear-to-r from-blue-600 to-purple-600 px-8 py-4 text-white font-semibold hover:from-blue-700 hover:to-purple-700 transition-all"
               >
                 Get Started Free
               </Link>
@@ -176,7 +176,7 @@ export default function Home() {
 
           {/* CTA Section */}
           <section className="py-20 text-center">
-            <div className="rounded-2xl border border-slate-700 bg-gradient-to-r from-blue-600/20 to-purple-600/20 p-12 backdrop-blur-sm">
+            <div className="rounded-2xl border border-slate-700 bg-linear-to-r from-blue-600/20 to-purple-600/20 p-12 backdrop-blur-sm">
               <h2 className="text-4xl font-bold text-slate-200 mb-4">
                 Ready to Deploy Faster?
               </h2>
@@ -185,7 +185,7 @@ export default function Home() {
               </p>
               <Link
                 href="/iac"
-                className="inline-block rounded-lg bg-gradient-to-r from-blue-600 to-purple-600 px-8 py-4 text-white font-semibold hover:from-blue-700 hover:to-purple-700 transition-all"
+                className="inline-block rounded-lg bg-linear-to-r from-blue-600 to-purple-600 px-8 py-4 text-white font-semibold hover:from-blue-700 hover:to-purple-700 transition-all"
               >
                 Get Started Now
               </Link>

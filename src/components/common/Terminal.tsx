@@ -45,7 +45,7 @@ export default function Terminal({ className }: TerminalProps) {
     terminal.writeln("");
 
     let currentLine = "";
-    let commandHistory: string[] = [];
+    const commandHistory: string[] = [];
     let historyIndex = -1;
 
     terminal.onData((data) => {
@@ -136,7 +136,7 @@ export default function Terminal({ className }: TerminalProps) {
           terminal.writeln(`\x1b[33mUnknown command: ${command}\x1b[0m`);
           terminal.writeln("Type 'help' for available commands");
         }
-      } catch (error) {
+      } catch {
         terminal.writeln(
           `\x1b[31mFailed to connect to wrapper API. Make sure it's running on ${WRAPPER_API_URL}\x1b[0m`
         );

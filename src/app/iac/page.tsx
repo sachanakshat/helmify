@@ -15,13 +15,15 @@ import { saveGenerationToCache, getGenerationFromCache } from "@/lib/storage";
 export default function IACPage() {
   const [cloud, setCloud] = useState<"aws" | "azure">("aws");
   const [region, setRegion] = useState(cloudRegions.aws[0]);
+  const [preferPreset, setPreferPreset] = useState(true);
   const [microservices, setMicroservices] = useState<MicroserviceState[]>([
     { ...defaultMicroservice },
   ]);
   const [expandedService, setExpandedService] = useState<number | null>(0);
   const [customPrompt, setCustomPrompt] = useState("");
   const [loading, setLoading] = useState(false);
-  const [aiLoading, setAiLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [validation, setValidation] = useState<{ issues: string[]; suggestedFixes: string[] } | null>(null);
   const [generationResult, setGenerationResult] = useState<{
     terraform?: { files: Record<string, string> };
     helmCharts?: Array<{ name: string; files: Record<string, string> }>;
@@ -65,6 +67,11 @@ export default function IACPage() {
     );
   };
 
+  const handleMicroserviceRemove = (index: number) => {
+    setMicroservices((prev) => prev.filter((_, idx) => idx !== index));
+    setExpandedService((prev) => (prev === index ? null : prev));
+  };
+
   const handleNestedChange = (
     index: number,
     path: "ingress" | "hpa" | "resources" | "configMap" | "secret",
@@ -84,7 +91,7 @@ export default function IACPage() {
   const buildTerraformPayload = () => ({
     cloud,
     region,
-    preferPreset: true,
+    preferPreset,
     customPrompt: customPrompt || undefined,
     microservices: microservices.map((svc) => ({
       name: svc.name,
@@ -147,6 +154,8 @@ export default function IACPage() {
   const handleGenerateIac = async (event: FormEvent) => {
     event.preventDefault();
     setLoading(true);
+    setError(null);
+    setValidation(null);
     try {
       const body = buildTerraformPayload();
       const response = await fetch("/api/iac", {
@@ -156,6 +165,10 @@ export default function IACPage() {
       });
       if (!response.ok) throw new Error("Request failed");
       const json = await response.json();
+
+      if (json.validation?.issues?.length > 0) {
+        setValidation(json.validation);
+      }
 
       // Combine all files for file explorer
       const allFiles: Record<string, string> = {};
@@ -186,10 +199,37 @@ export default function IACPage() {
         cloud,
         region,
       });
-    } catch (error) {
-      console.error("Failed to generate:", error);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to generate infrastructure");
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleDownload = async (type: "terraform" | "helm" | "all") => {
+    try {
+      const body = {
+        type,
+        ...(type !== "helm" ? { files: generationResult?.terraform?.files ?? {} } : {}),
+        ...(type !== "terraform" ? { helmCharts: generationResult?.helmCharts ?? [] } : {}),
+      };
+      const response = await fetch("/api/download", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body),
+      });
+      if (!response.ok) throw new Error("Download failed");
+      const blob = await response.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `helmify-${type}-${Date.now()}.zip`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Download failed");
     }
   };
 
@@ -277,7 +317,7 @@ export default function IACPage() {
         />
       }
       codeViewer={
-        <div className="w-[600px]">
+        <div className="w-150">
           <CodeViewer
             content={selectedFile?.content || ""}
             filename={selectedFile?.path}
@@ -287,7 +327,7 @@ export default function IACPage() {
     >
       <div className="mx-auto max-w-4xl px-6 py-10">
         <header className="mb-10">
-          <h1 className="text-4xl font-bold bg-gradient-to-r from-blue-400 to-purple-400 bg-clip-text text-transparent">
+          <h1 className="text-4xl font-bold bg-linear-to-r from-blue-400 to-purple-400 bg-clip-text text-transparent">
             Infrastructure as Code
           </h1>
           <p className="mt-2 text-lg text-slate-400">
@@ -296,11 +336,35 @@ export default function IACPage() {
         </header>
 
         <div className="space-y-6">
+          {error && (
+            <div className="rounded-xl border border-red-600/50 bg-red-900/20 p-4">
+              <p className="text-sm text-red-200">{error}</p>
+            </div>
+          )}
+
+          {validation && validation.issues.length > 0 && (
+            <div className="rounded-xl border border-yellow-600/50 bg-yellow-900/20 p-4">
+              <p className="text-sm font-semibold text-yellow-200 mb-2">Validation Warnings</p>
+              <ul className="list-disc list-inside space-y-1 text-sm text-yellow-300">
+                {validation.issues.map((issue, i) => (
+                  <li key={i}>{issue}</li>
+                ))}
+              </ul>
+              {validation.suggestedFixes.length > 0 && (
+                <p className="mt-2 text-xs text-yellow-400">
+                  Fix: {validation.suggestedFixes.join("; ")}
+                </p>
+              )}
+            </div>
+          )}
+
           <CloudSelector
             cloud={cloud}
             region={region}
+            preferPreset={preferPreset}
             onCloudChange={setCloud}
             onRegionChange={setRegion}
+            onPresetChange={setPreferPreset}
           />
 
           <MicroserviceList
@@ -331,11 +395,45 @@ export default function IACPage() {
             onToggle={(index) =>
               setExpandedService(expandedService === index ? null : index)
             }
+            onRemove={handleMicroserviceRemove}
             onChange={handleMicroserviceChange}
             onNestedChange={handleNestedChange}
           />
 
           <GenerateButton loading={loading} onSubmit={handleGenerateIac} />
+
+          {generationResult && Object.keys(allFiles).length > 0 && (
+            <section className="rounded-xl border border-slate-700 bg-slate-800/50 p-6 backdrop-blur-sm">
+              <h2 className="text-xl font-semibold text-slate-200 mb-4">Download Generated Files</h2>
+              <div className="flex flex-wrap gap-3">
+                {generationResult.terraform && (
+                  <button
+                    type="button"
+                    onClick={() => handleDownload("terraform")}
+                    className="rounded-lg border border-blue-600 bg-blue-600/10 px-4 py-2 text-sm font-medium text-blue-400 hover:bg-blue-600/20 transition-colors"
+                  >
+                    ⬇ Download Terraform
+                  </button>
+                )}
+                {generationResult.helmCharts && generationResult.helmCharts.length > 0 && (
+                  <button
+                    type="button"
+                    onClick={() => handleDownload("helm")}
+                    className="rounded-lg border border-purple-600 bg-purple-600/10 px-4 py-2 text-sm font-medium text-purple-400 hover:bg-purple-600/20 transition-colors"
+                  >
+                    ⬇ Download Helm Charts
+                  </button>
+                )}
+                <button
+                  type="button"
+                  onClick={() => handleDownload("all")}
+                  className="rounded-lg border border-emerald-600 bg-emerald-600/10 px-4 py-2 text-sm font-medium text-emerald-400 hover:bg-emerald-600/20 transition-colors"
+                >
+                  ⬇ Download All (ZIP)
+                </button>
+              </div>
+            </section>
+          )}
 
           {Object.keys(allFiles).length > 0 && selectedChart && Object.keys(currentChartFiles).length > 0 && (
             <section className="rounded-xl border border-slate-700 bg-slate-800/50 p-6 backdrop-blur-sm">

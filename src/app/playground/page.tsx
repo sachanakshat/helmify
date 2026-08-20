@@ -132,7 +132,7 @@ export default function PlaygroundPage() {
     >
       <div className="mx-auto max-w-6xl px-6 py-10">
         <header className="mb-10">
-          <h1 className="text-4xl font-bold bg-gradient-to-r from-blue-400 to-purple-400 bg-clip-text text-transparent">
+          <h1 className="text-4xl font-bold bg-linear-to-r from-blue-400 to-purple-400 bg-clip-text text-transparent">
             Minikube Playground
           </h1>
           <p className="mt-2 text-lg text-slate-400">
@@ -158,7 +158,7 @@ export default function PlaygroundPage() {
               <button
                 onClick={handleDeploy}
                 disabled={deploying || Object.keys(cachedFiles).length === 0}
-                className="w-full rounded-lg bg-gradient-to-r from-blue-600 to-purple-600 px-6 py-3 font-semibold text-white transition-all hover:from-blue-700 hover:to-purple-700 disabled:opacity-50"
+                className="w-full rounded-lg bg-linear-to-r from-blue-600 to-purple-600 px-6 py-3 font-semibold text-white transition-all hover:from-blue-700 hover:to-purple-700 disabled:opacity-50"
               >
                 {deploying ? "Deploying..." : "Deploy to Minikube"}
               </button>
@@ -256,7 +256,7 @@ export default function PlaygroundPage() {
           <div className="space-y-3 text-slate-400 text-sm">
             <p>
               The Playground connects to a local wrapper API that interfaces with your Minikube
-              cluster. When you click "Deploy", it sends your generated Helm charts to the wrapper,
+              cluster. When you click &ldquo;Deploy&rdquo;, it sends your generated Helm charts to the wrapper,
               which then:
             </p>
             <ol className="list-decimal list-inside space-y-2 ml-4">

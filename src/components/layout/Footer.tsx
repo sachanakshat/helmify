@@ -10,7 +10,7 @@ export default function Footer() {
       <div className="mx-auto max-w-7xl px-6 py-12">
         <div className="grid gap-8 md:grid-cols-4">
           <div>
-            <h3 className="text-lg font-bold bg-gradient-to-r from-blue-400 to-purple-400 bg-clip-text text-transparent mb-4">
+            <h3 className="text-lg font-bold bg-linear-to-r from-blue-400 to-purple-400 bg-clip-text text-transparent mb-4">
               Helmify
             </h3>
             <p className="text-sm text-slate-400">

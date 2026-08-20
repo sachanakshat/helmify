@@ -258,7 +258,7 @@ resource_group_name = "my-resource-group"`;
   return base;
 }
 
-function generateModuleMainTf(service: MicroserviceConfig, cloud: string): string {
+function generateModuleMainTf(service: MicroserviceConfig, _cloud: string): string {
   return `# Module for ${service.name} microservice
 
 resource "kubernetes_namespace" "main" {
@@ -449,7 +449,7 @@ output "ingress_url" {
 `;
 }
 
-function generateKubernetesTf(service: MicroserviceConfig, cloud: string): string {
+function generateKubernetesTf(service: MicroserviceConfig, _cloud: string): string {
   return `# Kubernetes resources for ${service.name}
 
 ${service.configMap ? `
@@ -504,7 +504,7 @@ resource "kubernetes_secret" "${service.name}_pull_secret" {
 `;
 }
 
-function generateNetworkingTf(service: MicroserviceConfig, cloud: string): string {
+function generateNetworkingTf(service: MicroserviceConfig, _cloud: string): string {
   if (service.services.length === 0) return '';
   
   return `# Networking configuration for ${service.name}

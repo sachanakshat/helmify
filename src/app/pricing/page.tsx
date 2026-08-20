@@ -8,7 +8,7 @@ export default function PricingPage() {
     <PageLayout>
       <div className="mx-auto max-w-7xl px-6 py-20">
         <header className="text-center mb-16">
-          <h1 className="text-5xl font-bold bg-gradient-to-r from-blue-400 to-purple-400 bg-clip-text text-transparent mb-4">
+          <h1 className="text-5xl font-bold bg-linear-to-r from-blue-400 to-purple-400 bg-clip-text text-transparent mb-4">
             Simple, Transparent Pricing
           </h1>
           <p className="text-xl text-slate-400 max-w-2xl mx-auto">

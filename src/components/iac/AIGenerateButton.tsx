@@ -63,7 +63,7 @@ export default function AIGenerateButton({
           AI Modification Prompt
         </label>
         <p className="text-xs text-slate-500 mb-2">
-          Describe the changes you want to make to your Helm charts (e.g., "Add resource limits", "Enable TLS", "Add health checks")
+          Describe the changes you want to make to your Helm charts (e.g., &ldquo;Add resource limits&rdquo;, &ldquo;Enable TLS&rdquo;, &ldquo;Add health checks&rdquo;)
         </p>
         <textarea
           className="w-full rounded-lg border border-slate-600 bg-slate-700 px-3 py-2 text-sm text-slate-100 placeholder-slate-500 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20"
@@ -82,7 +82,7 @@ export default function AIGenerateButton({
         type="button"
         onClick={handleAIGenerate}
         disabled={loading || !prompt.trim()}
-        className="w-full rounded-lg bg-gradient-to-r from-purple-600 to-pink-600 px-6 py-3 font-semibold text-white transition-all hover:from-purple-700 hover:to-pink-700 disabled:opacity-50 disabled:cursor-not-allowed"
+        className="w-full rounded-lg bg-linear-to-r from-purple-600 to-pink-600 px-6 py-3 font-semibold text-white transition-all hover:from-purple-700 hover:to-pink-700 disabled:opacity-50 disabled:cursor-not-allowed"
       >
         {loading ? "Generating with AI..." : "✨ Generate with AI"}
       </button>

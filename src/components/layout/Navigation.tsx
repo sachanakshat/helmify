@@ -20,7 +20,7 @@ export default function Navigation() {
     <nav className="border-b border-slate-700 bg-slate-800/50 backdrop-blur-sm">
       <div className="mx-auto max-w-7xl px-6 py-4">
         <div className="flex items-center justify-between">
-          <Link href="/" className="text-xl font-bold bg-gradient-to-r from-blue-400 to-purple-400 bg-clip-text text-transparent">
+          <Link href="/" className="text-xl font-bold bg-linear-to-r from-blue-400 to-purple-400 bg-clip-text text-transparent">
             Helmify
           </Link>
           <div className="flex gap-1">

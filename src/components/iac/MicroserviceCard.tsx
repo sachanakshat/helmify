@@ -8,6 +8,7 @@ interface MicroserviceCardProps {
   index: number;
   isExpanded: boolean;
   onToggle: () => void;
+  onRemove: () => void;
   onChange: (changes: Partial<MicroserviceState>) => void;
   onNestedChange: (
     path: "ingress" | "hpa" | "resources" | "configMap" | "secret",
@@ -17,19 +18,31 @@ interface MicroserviceCardProps {
 
 export default function MicroserviceCard({
   service,
+  index,
   isExpanded,
   onToggle,
+  onRemove,
   onChange,
   onNestedChange,
 }: MicroserviceCardProps) {
   return (
     <div className="rounded-lg border border-slate-700 bg-slate-800/30 p-4">
       <div className="mb-3">
-        <label className="block text-xs font-medium text-slate-400 mb-1">
-          Microservice Name
-        </label>
+        <div className="flex items-center justify-between mb-1">
+          <label className="block text-xs font-medium text-slate-400">
+            Microservice Name
+          </label>
+          <button
+            type="button"
+            onClick={onRemove}
+            className="text-xs text-red-400 hover:text-red-300 transition-colors"
+            title={`Remove service ${index + 1}`}
+          >
+            ✕ Remove
+          </button>
+        </div>
         <p className="text-xs text-slate-500 mb-2">
-          Unique identifier for this microservice (e.g., "user-service", "payment-api", "auth-service")
+          Unique identifier for this microservice (e.g., &ldquo;user-service&rdquo;, &ldquo;payment-api&rdquo;, &ldquo;auth-service&rdquo;)
         </p>
         <div className="flex gap-3 items-center">
           <input
@@ -67,7 +80,7 @@ export default function MicroserviceCard({
           External Service Dependencies
         </label>
         <p className="text-xs text-slate-500 mb-2">
-          List external services this microservice depends on (e.g., "postgres,redis,mongodb" for database and cache dependencies)
+          List external services this microservice depends on (e.g., &ldquo;postgres,redis,mongodb&rdquo; for database and cache dependencies)
         </p>
         <input
           className="w-full rounded-lg border border-slate-600 bg-slate-700 px-3 py-2 text-sm text-slate-100 placeholder-slate-500 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20"

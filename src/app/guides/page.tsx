@@ -7,7 +7,7 @@ export default function GuidesPage() {
     <PageLayout>
       <div className="mx-auto max-w-4xl px-6 py-10">
         <header className="mb-10">
-          <h1 className="text-4xl font-bold bg-gradient-to-r from-blue-400 to-purple-400 bg-clip-text text-transparent">
+          <h1 className="text-4xl font-bold bg-linear-to-r from-blue-400 to-purple-400 bg-clip-text text-transparent">
             Guides & Documentation
           </h1>
           <p className="mt-2 text-lg text-slate-400">

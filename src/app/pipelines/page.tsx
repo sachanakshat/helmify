@@ -15,12 +15,16 @@ export default function PipelinesPage() {
   const [deploymentType, setDeploymentType] = useState<"app" | "service" | "helm">("service");
   const [customPrompt, setCustomPrompt] = useState("");
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [validation, setValidation] = useState<{ issues: string[]; suggestedFixes: string[] } | null>(null);
   const [pipelineOutput, setPipelineOutput] = useState("");
   const [selectedFile, setSelectedFile] = useState<{ path: string; content: string } | null>(null);
 
   const handleGeneratePipeline = async (event: FormEvent) => {
     event.preventDefault();
     setLoading(true);
+    setError(null);
+    setValidation(null);
     try {
       const response = await fetch("/api/pipelines", {
         method: "POST",
@@ -38,17 +42,28 @@ export default function PipelinesPage() {
       if (!response.ok) throw new Error("Request failed");
       const json = await response.json();
       setPipelineOutput(json.template || "");
-
-      // Create file structure for explorer
-      const files: Record<string, string> = {
-        [`${ciProvider}-pipeline.yml`]: json.template || "",
-      };
+      if (json.validation?.issues?.length > 0) {
+        setValidation(json.validation);
+      }
       setSelectedFile({ path: `${ciProvider}-pipeline.yml`, content: json.template || "" });
-    } catch (error) {
-      console.error("Failed to generate:", error);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to generate pipeline");
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleDownload = () => {
+    if (!pipelineOutput) return;
+    const blob = new Blob([pipelineOutput], { type: "text/yaml" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `${ciProvider}-pipeline.yml`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
   };
 
   const files: Record<string, string> = pipelineOutput
@@ -66,14 +81,14 @@ export default function PipelinesPage() {
         />
       }
       codeViewer={
-        <div className="w-[600px]">
+        <div className="w-150">
           <CodeViewer content={selectedFile?.content || ""} filename={selectedFile?.path} />
         </div>
       }
     >
       <div className="mx-auto max-w-4xl px-6 py-10">
         <header className="mb-10">
-          <h1 className="text-4xl font-bold bg-gradient-to-r from-blue-400 to-purple-400 bg-clip-text text-transparent">
+          <h1 className="text-4xl font-bold bg-linear-to-r from-blue-400 to-purple-400 bg-clip-text text-transparent">
             CI/CD Pipelines
           </h1>
           <p className="mt-2 text-lg text-slate-400">
@@ -82,6 +97,22 @@ export default function PipelinesPage() {
         </header>
 
         <form onSubmit={handleGeneratePipeline} className="space-y-6">
+          {error && (
+            <div className="rounded-xl border border-red-600/50 bg-red-900/20 p-4">
+              <p className="text-sm text-red-200">{error}</p>
+            </div>
+          )}
+
+          {validation && validation.issues.length > 0 && (
+            <div className="rounded-xl border border-yellow-600/50 bg-yellow-900/20 p-4">
+              <p className="text-sm font-semibold text-yellow-200 mb-2">Validation Warnings</p>
+              <ul className="list-disc list-inside space-y-1 text-sm text-yellow-300">
+                {validation.issues.map((issue, i) => (
+                  <li key={i}>{issue}</li>
+                ))}
+              </ul>
+            </div>
+          )}
           <section className="rounded-xl border border-slate-700 bg-slate-800/50 p-6 backdrop-blur-sm">
             <h2 className="mb-4 text-xl font-semibold text-slate-200">Pipeline Configuration</h2>
             <div className="grid gap-4 md:grid-cols-2">
@@ -163,6 +194,16 @@ export default function PipelinesPage() {
           >
             {loading ? "Generating..." : "Generate Pipeline"}
           </button>
+
+          {pipelineOutput && (
+            <button
+              type="button"
+              onClick={handleDownload}
+              className="w-full rounded-lg border border-emerald-600 bg-emerald-600/10 px-6 py-3 font-semibold text-emerald-400 transition-colors hover:bg-emerald-600/20"
+            >
+              ⬇ Download Pipeline YAML
+            </button>
+          )}
         </form>
       </div>
     </PageLayout>

@@ -281,7 +281,7 @@ function generateSecretYaml(service: MicroserviceConfig): string {
   if (!service.secret) return '';
   
   const data = Object.entries(service.secret.values)
-    .map(([key, value]) => `    ${key}: {{ .Values.secrets.${key} | b64enc }}`)
+    .map(([key]) => `    ${key}: {{ .Values.secrets.${key} | b64enc }}`)
     .join('\n');
 
   return `apiVersion: v1
